@@ -1,0 +1,8 @@
+# build output
+build/
+
+# IDE / OS junk
+.vs/
+.vscode/
+*.user
+Thumbs.db

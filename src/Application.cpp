@@ -1,0 +1,275 @@
+#include "Application.h"
+
+#include "Window.h"
+#include <math.h>
+#include "Draw.h"
+
+#include <cstdio>
+#include <cstring>
+#include <string>
+
+
+namespace Renderer
+{
+    Application::Application()
+    {
+    
+    }
+
+    bool Application::Run()
+    {
+        Window window(WIDTH, HEIGHT, "SDL");
+
+        WIDTH = window.GetWidth();
+        HEIGHT = window.GetHeight();
+
+
+        renderer = SDL_CreateRenderer(
+            window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+
+        if (!renderer) {
+            std::fprintf(stderr, "SDL_CreateRenderer failed: %s\n", SDL_GetError());
+            return false;
+        };
+
+        Setup();
+
+        while (running) {
+             ProcessInput();
+             Update();
+             Render();
+        }
+
+        SDL_DestroyRenderer(renderer);   
+        return true;
+    }   
+
+    Application::~Application()
+    {
+        free(color_buffer);
+        SDL_Quit();                       
+    }
+
+    void Application::Setup()
+    {
+        color_buffer = (uint32_t*)malloc(sizeof(uint32_t) * HEIGHT * WIDTH);
+
+        color_buffer_texture = SDL_CreateTexture(
+            renderer,
+            SDL_PIXELFORMAT_ARGB8888,
+            SDL_TEXTUREACCESS_STREAMING,
+            WIDTH,
+            HEIGHT
+        );
+
+        
+        load_obj_files_data(ASSETS_DIR "box.obj");
+
+    }
+
+    void Application::Render()
+    {
+        Draw_Grid();
+        
+        num_triangles = triangles_to_render_x.size();
+        
+        for(int i = 0; i < num_triangles; i++){
+             triangle_t triangle = triangles_to_render_x[i];
+             Draw_Rect(triangle.points[0].x, triangle.points[0].y, 3, 3, 0xFFFFFF00);
+             Draw_Rect(triangle.points[1].x, triangle.points[1].y, 3, 3, 0xFFFFFF00);
+             Draw_Rect(triangle.points[2].x, triangle.points[2].y, 3, 3, 0xFFFFFF00);
+
+             Draw_Triangle(
+                triangle.points[0].x,
+                triangle.points[0].y,
+                triangle.points[1].x,
+                triangle.points[1].y,
+                triangle.points[2].x,
+                triangle.points[2].y,
+                0xFF00FF00
+             );
+         }
+
+        triangles_to_render_x.clear();
+        RenderColorBuffer();
+        ClearColorBuffer(0x00000000);
+        SDL_RenderPresent(renderer);
+    }
+
+    void Application::Update()
+    {
+        int time_to_wait = FRAME_TARGET_TIME - (SDL_GetTicks() - previous_frame_time);
+
+        // Only delay execution if we are running too fast
+        if (time_to_wait > 0 && time_to_wait <= FRAME_TARGET_TIME) {
+            SDL_Delay(time_to_wait);
+        }
+
+        previous_frame_time = SDL_GetTicks();
+
+
+        mesh.rotation.x += 0.01;
+        mesh.rotation.y += 0.01;
+        mesh.rotation.z += 0.01;
+
+        int num_faces = mesh.faces.size();
+        // Loop all triangle faces of our mesh
+        for (int i = 0; i < num_faces; i++) {
+            face_t mesh_face = mesh.faces[i];
+
+            vec3_t face_vertices[3];
+            face_vertices[0] = mesh.vertices[mesh_face.a - 1];
+            face_vertices[1] = mesh.vertices[mesh_face.b - 1];
+            face_vertices[2] = mesh.vertices[mesh_face.c - 1];
+
+            vec3_t transformed_vertices[3];
+
+            // Loop all three vertices of this current face and apply transformations
+            for (int j = 0; j < 3; j++) {
+                    vec3_t transformed_vertex = face_vertices[j];
+
+                    transformed_vertex = vec3_rotate_x(transformed_vertex, mesh.rotation.x);
+                    transformed_vertex = vec3_rotate_y(transformed_vertex, mesh.rotation.y);
+                    transformed_vertex = vec3_rotate_z(transformed_vertex, mesh.rotation.z);
+
+                    transformed_vertex.z += 5;
+
+                    // save transformed vertex in the array of transformed vertices
+                    transformed_vertices[j] = transformed_vertex;
+            }
+
+            // Backface culling
+            vec3_t vector_a = transformed_vertices[0];
+            vec3_t vector_b = transformed_vertices[1];
+            vec3_t vector_c = transformed_vertices[2];
+
+            vec3_t vector_ab = vec3_sub(vector_b, vector_a);
+            vec3_t vector_ac = vec3_sub(vector_c, vector_a);
+
+            // compute face normal
+            vec3_t normal = vec3_cross(vector_ab, vector_ac);
+
+
+            vec3_t camera_ray = vec3_sub(camera_position, vector_a);
+
+            float dot_normal_camera = vec3_dot(camera_ray, normal);
+
+            if (dot_normal_camera < 0){
+                continue;
+            }
+
+            triangle_t projected_triangle;
+
+            for (int j = 0; j < 3; j++) {
+
+                    vec2_t projected_point = project(transformed_vertices[j]);
+
+                    projected_point.x += (WIDTH / 2);
+                    projected_point.y += (HEIGHT/ 2);
+
+                    projected_triangle.points[j] = projected_point;
+                }
+
+            triangles_to_render_x.push_back(projected_triangle);
+        }
+
+        // for (int i)
+
+        /*
+        for (int i = 0; i <N_POINTS; i++)
+        {
+            vec3_t point = cube_points[i];
+
+            vec3_t transform_point = vec3_rotate_y(point, cube_rotation.y);
+            transform_point = vec3_rotate_x(transform_point, cube_rotation.z);
+
+            transform_point.z -= camera_position.z;
+
+            vec2_t projected_point = project(transform_point);
+
+            projected_points[i] = projected_point;
+        }*/
+    }
+        
+
+
+    void Application::ProcessInput()
+    {
+        SDL_Event event;
+        while (SDL_PollEvent(&event)) {
+                    switch (event.type) {
+                        case SDL_QUIT:
+                            running = false;
+                            break;
+                        case SDL_KEYDOWN:
+                            if (event.key.keysym.sym == SDLK_ESCAPE) {
+                                running = false;
+                            }
+                            break;
+                    }
+                }
+    }
+
+    void Application::load_obj_files_data(char* filename)
+    {
+        FILE* file = nullptr;
+        fopen_s(&file, filename, "r");
+
+        char line[1024];
+
+        while (fgets(line, 1024, file)){
+            // vertex information
+            if (strncmp(line, "v ", 2) == 0) {
+                vec3_t vertex;
+                sscanf(line, "v %f %f %f", &vertex.x, &vertex.y, &vertex.z);
+                mesh.vertices.push_back(vertex);
+            }
+
+            if (strncmp(line, "f ", 2) == 0) {
+                int vertex_indices[3];
+                int texture_indices[3];
+                int normal_indices[3];
+
+                sscanf(
+                    line, "f %d/%d/%d %d/%d/%d %d/%d/%d",
+                    &vertex_indices[0], &texture_indices[0], &normal_indices[0],
+                    &vertex_indices[1], &texture_indices[1], &normal_indices[1],
+                    &vertex_indices[2], &texture_indices[2], &normal_indices[2]
+                );
+
+                face_t face = {
+                    .a = vertex_indices[0],
+                    .b = vertex_indices[1],
+                    .c = vertex_indices[2]
+                };
+
+                mesh.faces.push_back(face);
+            }
+
+        }
+    }
+
+    vec2_t Application::project(vec3_t point)
+    {
+        vec2_t projected_point = {
+            .x = (fov_factor * point.x) / point.z,
+            .y = (fov_factor * point.y) / point.z
+        };
+
+        return projected_point;
+    }
+
+    void Application::load_cube_mesh_data()
+    {
+        for (int i = 0; i < N_CUBE_VERTICES; i++) {
+            vec3_t cube_vertex = cube_vertices[i];
+            mesh.vertices.push_back(cube_vertex);
+        }
+
+        for (int i = 0; i < N_CUBE_FACES; i++){
+            face_t cube_face = cube_faces[i];
+            mesh.faces.push_back(cube_face);
+        }
+
+    }
+}

@@ -1,0 +1,72 @@
+# Blender 5.1.2 MTL File: 'None'
+# www.blender.org
+
+newmtl mat_melee
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+map_Kd C:/Users/pipnd/OneDrive/Desktop/ZeldaProject (1)/Textures/melee_diff.png
+map_d C:/Users/pipnd/OneDrive/Desktop/ZeldaProject (1)/Textures/melee_diff.png
+
+newmtl mat_misc
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+map_Kd C:/Users/pipnd/OneDrive/Desktop/ZeldaProject (1)/Textures/misc_diff.png
+map_d C:/Users/pipnd/OneDrive/Desktop/ZeldaProject (1)/Textures/misc_diff.png
+
+newmtl mat_ranged
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd C:/Users/pipnd/OneDrive/Desktop/ZeldaProject (1)/Textures/ranged_diff.psd
+
+newmtl mat_zelda
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.000000 0.000000 0.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+
+newmtl mat_zeldaEyes
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.000000 0.000000 0.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+
+newmtl mat_zeldaHair
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.000000 0.000000 0.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+
+newmtl mat_zeldaHairLong
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.000000 0.000000 0.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
