@@ -1,3 +1,5 @@
 #include "Mesh.h"
 
-mesh_t mesh;
+namespace Renderer {
+    mesh_t mesh;
+}

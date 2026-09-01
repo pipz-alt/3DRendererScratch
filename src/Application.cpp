@@ -2,7 +2,6 @@
 
 #include "Window.h"
 #include <math.h>
-#include "Draw.h"
 
 #include <cstdio>
 #include <cstring>
@@ -52,6 +51,10 @@ namespace Renderer
 
     void Application::Setup()
     {
+
+        render_method = RENDER_WIRE;
+        cull_method = CULL_BACKFACE;
+
         color_buffer = (uint32_t*)malloc(sizeof(uint32_t) * HEIGHT * WIDTH);
 
         color_buffer_texture = SDL_CreateTexture(
@@ -74,27 +77,59 @@ namespace Renderer
         num_triangles = triangles_to_render_x.size();
         
         for(int i = 0; i < num_triangles; i++){
-             triangle_t triangle = triangles_to_render_x[i];
-             Draw_Rect(triangle.points[0].x, triangle.points[0].y, 3, 3, 0xFFFFFF00);
-             Draw_Rect(triangle.points[1].x, triangle.points[1].y, 3, 3, 0xFFFFFF00);
-             Draw_Rect(triangle.points[2].x, triangle.points[2].y, 3, 3, 0xFFFFFF00);
+              triangle_t triangle = triangles_to_render_x[i];
+              
+            // this just hightlights the vertices in yelloq
 
-             Draw_Triangle(
-                triangle.points[0].x,
-                triangle.points[0].y,
-                triangle.points[1].x,
-                triangle.points[1].y,
-                triangle.points[2].x,
-                triangle.points[2].y,
-                0xFF00FF00
-             );
-         }
+            //   Draw_Rect(triangle.points[0].x, triangle.points[0].y, 3, 3, 0xFFFFFF00);
+            //   Draw_Rect(triangle.points[1].x, triangle.points[1].y, 3, 3, 0xFFFFFF00);
+            //   Draw_Rect(triangle.points[2].x, triangle.points[2].y, 3, 3, 0xFFFFFF00);
+
+             
+            if(render_method == RENDER_FILL_TRIANGLE || render_method == RENDER_FILL_TRIANGLE_WIRE)
+            { 
+                draw_filled_triangle(
+                    *this,
+                    triangle.points[0].x,
+                    triangle.points[0].y,
+                    triangle.points[1].x,
+                    triangle.points[1].y,
+                    triangle.points[2].x,
+                    triangle.points[2].y,
+                    0xFF00FF00
+              );
+            }
+
+            if(render_method == RENDER_WIRE || render_method == RENDER_WIRE_VERTEX || render_method == RENDER_FILL_TRIANGLE_WIRE)
+            {
+                Draw_Triangle(
+                    triangle.points[0].x,
+                    triangle.points[0].y,
+                    triangle.points[1].x,
+                    triangle.points[1].y,
+                    triangle.points[2].x,
+                    triangle.points[2].y,
+                    0xFF00FF00
+                );
+            }
+
+            // Draw triangle vertex points
+            if (render_method == RENDER_WIRE_VERTEX) 
+            {
+                Draw_Rect(triangle.points[0].x, triangle.points[0].y, 3, 3, 0xFFFFFF00);
+                Draw_Rect(triangle.points[1].x, triangle.points[1].y, 3, 3, 0xFFFFFF00);
+                Draw_Rect(triangle.points[2].x, triangle.points[2].y, 3, 3, 0xFFFFFF00);
+            }
+        }
+        // fixed
+        //draw_filled_triangle(*this, 300, 100, 50, 400, 500, 700, 0xFF00FF00);
 
         triangles_to_render_x.clear();
         RenderColorBuffer();
         ClearColorBuffer(0x00000000);
         SDL_RenderPresent(renderer);
     }
+    
 
     void Application::Update()
     {
@@ -106,7 +141,6 @@ namespace Renderer
         }
 
         previous_frame_time = SDL_GetTicks();
-
 
         mesh.rotation.x += 0.01;
         mesh.rotation.y += 0.01;
@@ -139,23 +173,30 @@ namespace Renderer
             }
 
             // Backface culling
-            vec3_t vector_a = transformed_vertices[0];
-            vec3_t vector_b = transformed_vertices[1];
-            vec3_t vector_c = transformed_vertices[2];
+            if (cull_method == CULL_BACKFACE){
+                vec3_t vector_a = transformed_vertices[0];
+                vec3_t vector_b = transformed_vertices[1];
+                vec3_t vector_c = transformed_vertices[2];
 
-            vec3_t vector_ab = vec3_sub(vector_b, vector_a);
-            vec3_t vector_ac = vec3_sub(vector_c, vector_a);
+                vec3_t vector_ab = vec3_sub(vector_b, vector_a);
+                vec3_t vector_ac = vec3_sub(vector_c, vector_a);
 
-            // compute face normal
-            vec3_t normal = vec3_cross(vector_ab, vector_ac);
+                vec3_normalize(&vector_ab);
+                vec3_normalize(&vector_ac);
 
+                // compute face normal
+                vec3_t normal = vec3_cross(vector_ab, vector_ac);
 
-            vec3_t camera_ray = vec3_sub(camera_position, vector_a);
+                // normalize face normal
+                vec3_normalize(&normal);
 
-            float dot_normal_camera = vec3_dot(camera_ray, normal);
+                vec3_t camera_ray = vec3_sub(camera_position, vector_a);
 
-            if (dot_normal_camera < 0){
-                continue;
+                float dot_normal_camera = vec3_dot(camera_ray, normal);
+
+                if (dot_normal_camera < 0){
+                    continue;
+                }
             }
 
             triangle_t projected_triangle;
@@ -202,9 +243,20 @@ namespace Renderer
                             running = false;
                             break;
                         case SDL_KEYDOWN:
-                            if (event.key.keysym.sym == SDLK_ESCAPE) {
+                            if (event.key.keysym.sym == SDLK_ESCAPE)
                                 running = false;
-                            }
+                            if (event.key.keysym.sym == SDLK_1)
+                                render_method = RENDER_WIRE_VERTEX;
+                            if (event.key.keysym.sym == SDLK_2)
+                                render_method = RENDER_WIRE;
+                            if (event.key.keysym.sym == SDLK_3)
+                                render_method = RENDER_FILL_TRIANGLE;
+                            if (event.key.keysym.sym == SDLK_4)
+                                render_method = RENDER_FILL_TRIANGLE_WIRE;
+                            if (event.key.keysym.sym == SDLK_c)
+                                cull_method = CULL_BACKFACE;
+                            if (event.key.keysym.sym == SDLK_d)
+                                cull_method = CULL_NONE;
                             break;
                     }
                 }

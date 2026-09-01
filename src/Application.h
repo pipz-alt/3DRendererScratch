@@ -13,6 +13,20 @@
 
 namespace Renderer {
 
+    enum cull_method {
+        CULL_NONE,
+        CULL_BACKFACE
+    };
+    inline enum cull_method cull_method;
+
+    enum render_method {
+        RENDER_WIRE,
+        RENDER_WIRE_VERTEX,
+        RENDER_FILL_TRIANGLE,
+        RENDER_FILL_TRIANGLE_WIRE
+    };
+    inline enum render_method render_method;
+
     class Application : public Draw{
 
         public:
@@ -41,8 +55,8 @@ namespace Renderer {
 
             vec3_t camera_position = { 0, 0, 0 };
 
-            int WIDTH = 2560;
-            int HEIGHT = 1440;
+            // int WIDTH = 2560;
+            // int HEIGHT = 1440;
 
             #define N_CUBE_VERTICES 8 
             
