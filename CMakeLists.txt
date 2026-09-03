@@ -33,6 +33,8 @@ src/Draw.h
 src/Draw.cpp
 src/Buffer.h
 src/Buffer.cpp
+src/Matrix.h
+src/Matrix.cpp
 )
 
 target_compile_definitions(scratch PRIVATE ASSETS_DIR="${CMAKE_SOURCE_DIR}/assets/")
