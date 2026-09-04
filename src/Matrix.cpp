@@ -68,6 +68,29 @@ mat4_t mat4_make_rotation_z(float angle)
     return m;
 }
 
+mat4_t mat4_make_perspective(float fov, float aspect_ratio, float near_plane, float far_plane)
+{
+    mat4_t m = {{{0}}};
+    m.m[0][0] = aspect_ratio * (1 / tan(fov / 2.0f));
+    m.m[1][1] = 1 / tan(fov / 2.0f);
+    m.m[2][2] = far_plane / (far_plane - near_plane);
+    m.m[2][3] = -far_plane * near_plane / (far_plane - near_plane);
+    m.m[3][2] = 1;
+    return m;
+}
+
+vec4_t mat4_mul_vec4_project(mat4_t mat_proj, vec4_t v)
+{
+    vec4_t result = mat4_mul_vec4(mat_proj, v);
+
+    if (result.w != 0.0f) {
+        result.x /= result.w;
+        result.y /= result.w;
+        result.z /= result.w;
+    }
+    return result;
+}
+
 vec4_t mat4_mul_vec4(mat4_t m, vec4_t v)
 {
     vec4_t result;
@@ -78,4 +101,21 @@ vec4_t mat4_mul_vec4(mat4_t m, vec4_t v)
     result.w = m.m[3][0] * v.x + m.m[3][1] * v.y + m.m[3][2] * v.z + m.m[3][3] * v.w;
 
     return result;
+}
+
+mat4_t mat4_mul_mat4(mat4_t a, mat4_t b)
+{
+    mat4_t m;
+    
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
+            m.m[i][j] = 
+            a.m[i][0] * b.m[0][j] +
+            a.m[i][1] * b.m[1][j] +
+            a.m[i][2] * b.m[2][j] +
+            a.m[i][3] * b.m[3][j];
+        }
+    }
+
+    return m;
 }

@@ -35,6 +35,8 @@ src/Buffer.h
 src/Buffer.cpp
 src/Matrix.h
 src/Matrix.cpp
+src/Light.h
+src/Light.cpp
 )
 
 target_compile_definitions(scratch PRIVATE ASSETS_DIR="${CMAKE_SOURCE_DIR}/assets/")

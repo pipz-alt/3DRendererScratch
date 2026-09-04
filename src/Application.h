@@ -7,9 +7,13 @@
 #include "Triangle.h"
 #include "Mesh.h"
 #include "Draw.h" 
+#include "Matrix.h"
+#include <math.h>
 
 #define FPS 60
 #define FRAME_TARGET_TIME (1000 / FPS)
+#define M_PI 3.14159265358979323846
+
 
 namespace Renderer {
 
@@ -50,7 +54,7 @@ namespace Renderer {
             static const int N_POINTS = 9 * 9 * 9;
             vec3_t cube_points[N_POINTS];
             vec2_t projected_points[N_POINTS];
-            float fov_factor = 640;
+            mat4_t projection_matrix;
             // vec3_t cube_rotation = { .x = 0, .y = 0, .z = 0 };
 
             vec3_t camera_position = { 0, 0, 0 };
@@ -74,28 +78,28 @@ namespace Renderer {
             #define N_CUBE_FACES (6 * 2)
             face_t cube_faces[N_CUBE_FACES] = {
                 // front
-                { .a = 1, .b = 2, .c = 3, .color = 0xFFFF0000 },
-                { .a = 1, .b = 3, .c = 4, .color = 0xFFFF0000 },
+                { .a = 1, .b = 2, .c = 3, .color = 0xFFFFFFFF },
+                { .a = 1, .b = 3, .c = 4, .color = 0xFFFFFFFF },
 
                 // right
-                { .a = 4, .b = 3, .c = 5, .color = 0xFF00FF00 },
-                { .a = 4, .b = 5, .c = 6, .color = 0xFF00FF00 },
+                { .a = 4, .b = 3, .c = 5, .color = 0xFFFFFFFF },
+                { .a = 4, .b = 5, .c = 6, .color = 0xFFFFFFFF },
 
                 // back
-                { .a = 6, .b = 5, .c = 7, .color = 0xFFFF0000 },
-                { .a = 6, .b = 7, .c = 8, .color = 0xFFFF0000 },
+                { .a = 6, .b = 5, .c = 7, .color = 0xFFFFFFFF },
+                { .a = 6, .b = 7, .c = 8, .color = 0xFFFFFFFF },
 
                 // left
-                { .a = 8, .b = 7, .c = 2, .color = 0xFFFFFF00 },
-                { .a = 8, .b = 2, .c = 1, .color = 0xFFFFFF00 },
+                { .a = 8, .b = 7, .c = 2, .color = 0xFFFFFFFF },
+                { .a = 8, .b = 2, .c = 1, .color = 0xFFFFFFFF },
 
                 // top
-                { .a = 2, .b = 7, .c = 5, .color = 0xFFFF0000 },
-                { .a = 2, .b = 5, .c = 3, .color = 0xFFFF0000 },
+                { .a = 2, .b = 7, .c = 5, .color = 0xFFFFFFFF },
+                { .a = 2, .b = 5, .c = 3, .color = 0xFFFFFFFF },
 
                 // bottom
-                { .a = 6, .b = 8, .c = 1, .color = 0xFF00FFFF },
-                { .a = 6, .b = 1, .c = 4, .color = 0xFF00FFFF }
+                { .a = 6, .b = 8, .c = 1, .color = 0xFFFFFFFF },
+                { .a = 6, .b = 1, .c = 4, .color = 0xFFFFFFFF }
             };
 
             // mesh_t mesh = {

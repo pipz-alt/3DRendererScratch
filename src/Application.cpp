@@ -1,12 +1,13 @@
 #include "Application.h"
 
 #include "Window.h"
-#include <math.h>
+#include "Light.h"
+
 
 #include <cstdio>
 #include <cstring>
 #include <string>
-#include "Matrix.h"
+
 
 
 namespace Renderer
@@ -66,8 +67,15 @@ namespace Renderer
             HEIGHT
         );
 
-        load_cube_mesh_data();
-        //load_obj_files_data(ASSETS_DIR "box.obj");
+        // Initialize perspective projection parameters
+        float fov = M_PI / 3.0;
+        float aspect_ratio = (float)HEIGHT / (float)WIDTH;
+        float near_plane = 0.1f;
+        float far_plane = 100.0f;
+        projection_matrix = mat4_make_perspective(fov, aspect_ratio, near_plane, far_plane);
+
+        //load_cube_mesh_data();
+       load_obj_files_data(ASSETS_DIR "test.obj");
 
     }
 
@@ -143,14 +151,14 @@ namespace Renderer
 
         previous_frame_time = SDL_GetTicks();
 
-        mesh.rotation.x += 0.01;
+        //mesh.rotation.x += 0.01;
         mesh.rotation.y += 0.01;
-        mesh.rotation.z += 0.01;
+        // mesh.rotation.z += 0.01;
 
-        mesh.scale.x += 0.002;
-        mesh.translation.x += 0.02;
-        mesh.translation.y += 0;
-        mesh.translation.z += 0;
+        // mesh.scale.x += 0.002;
+        // mesh.translation.x += 0.02;
+        // mesh.translation.y += 0;
+        // mesh.translation.z += 0;
 
         mat4_t scale_matrix = mat4_make_scale(mesh.scale.x, mesh.scale.y, mesh.scale.z);
         mat4_t rotation_matrix_x = mat4_make_rotation_x(mesh.rotation.x);
@@ -174,61 +182,73 @@ namespace Renderer
             for (int j = 0; j < 3; j++) {
                     vec4_t transformed_vertex = vec4_from_vec3(face_vertices[j]);
 
-                    transformed_vertex = mat4_mul_vec4(scale_matrix, transformed_vertex);
-                    transformed_vertex = mat4_mul_vec4(translation_matrix, transformed_vertex);
-                    transformed_vertex = mat4_mul_vec4(rotation_matrix_x, transformed_vertex);
-                    transformed_vertex = mat4_mul_vec4(rotation_matrix_y, transformed_vertex);  
-                    transformed_vertex = mat4_mul_vec4(rotation_matrix_z, transformed_vertex);
+                    mat4_t world_matrix = mat4_identity();
+                    world_matrix = mat4_mul_mat4(scale_matrix, world_matrix);
+                    world_matrix = mat4_mul_mat4(rotation_matrix_x, world_matrix);
+                    world_matrix = mat4_mul_mat4(rotation_matrix_y, world_matrix);
+                    world_matrix = mat4_mul_mat4(rotation_matrix_z, world_matrix);
+                    world_matrix = mat4_mul_mat4(translation_matrix, world_matrix);
 
-                    // transformed_vertex = vec3_rotate_x(transformed_vertex, mesh.rotation.x);
-                    // transformed_vertex = vec3_rotate_y(transformed_vertex, mesh.rotation.y);
-                    // transformed_vertex = vec3_rotate_z(transformed_vertex, mesh.rotation.z);
+                    transformed_vertex = mat4_mul_vec4(world_matrix, transformed_vertex);
+
 
                     transformed_vertex.z += 5;
-
                     // save transformed vertex in the array of transformed vertices
                     transformed_vertices[j] = transformed_vertex;
             }
 
             // Backface culling
-            if (cull_method == CULL_BACKFACE){
-                vec3_t vector_a = vec3_from_vec4(transformed_vertices[0]);
-                vec3_t vector_b = vec3_from_vec4(transformed_vertices[1]);
-                vec3_t vector_c = vec3_from_vec4(transformed_vertices[2]);
+        
+            vec3_t vector_a = vec3_from_vec4(transformed_vertices[0]);
+            vec3_t vector_b = vec3_from_vec4(transformed_vertices[1]);
+            vec3_t vector_c = vec3_from_vec4(transformed_vertices[2]);
 
-                vec3_t vector_ab = vec3_sub(vector_b, vector_a);
-                vec3_t vector_ac = vec3_sub(vector_c, vector_a);
+            vec3_t vector_ab = vec3_sub(vector_b, vector_a);
+            vec3_t vector_ac = vec3_sub(vector_c, vector_a);
 
-                vec3_normalize(&vector_ab);
-                vec3_normalize(&vector_ac);
-
+            vec3_normalize(&vector_ab);
+            vec3_normalize(&vector_ac);
                 // compute face normal
-                vec3_t normal = vec3_cross(vector_ab, vector_ac);
+            vec3_t normal = vec3_cross(vector_ab, vector_ac);
 
-                // normalize face normal
-                vec3_normalize(&normal);
+            // normalize face normal
+            vec3_normalize(&normal);
 
-                vec3_t camera_ray = vec3_sub(camera_position, vector_a);
+            vec3_t camera_ray = vec3_sub(camera_position, vector_a);
 
-                float dot_normal_camera = vec3_dot(camera_ray, normal);
+            float dot_normal_camera = vec3_dot(camera_ray, normal);
 
+            if (cull_method == CULL_BACKFACE){
                 if (dot_normal_camera < 0){
                     continue;
                 }
             }
 
-            vec2_t projected_points[3];
+            vec4_t projected_points[3];
             triangle_t projected_triangle;
 
                 for (int j = 0; j < 3; j++) {
 
-                        projected_points[j] = project(vec3_from_vec4(transformed_vertices[j]));
+                        projected_points[j] = mat4_mul_vec4_project(projection_matrix, transformed_vertices[j]);
 
-                        projected_points[j].x += (WIDTH / 2);
-                        projected_points[j].y += (HEIGHT/ 2);
+                        projected_points[j].x *= (WIDTH / 2.0);
+                        projected_points[j].y *= -(HEIGHT / 2.0);
+
+                        projected_points[j].x += (WIDTH / 2.0);
+                        projected_points[j].y += (HEIGHT/ 2.0);
+
+
                 }
 
                 float avg_depth = (transformed_vertices[0].z + transformed_vertices[1].z + transformed_vertices[2].z) / 3.0f;
+
+                float light_intensity = -vec3_dot(normal, light.direction);
+
+                // Calculate color based on light angle
+               
+                
+                uint32_t triangle_color = light_apply_intensity(mesh_face.color, light_intensity);
+
 
                 projected_triangle = {
                     .points = {
@@ -236,7 +256,7 @@ namespace Renderer
                         {projected_points[1].x, projected_points[1].y},
                         {projected_points[2].x, projected_points[2].y},
                     },
-                    .color = mesh_face.color,
+                    .color = triangle_color,
                     .avg_depth = avg_depth
                 };
 
@@ -253,23 +273,6 @@ namespace Renderer
                 }
             }
         }
-
-        // for (int i)
-
-        /*
-        for (int i = 0; i <N_POINTS; i++)
-        {
-            vec3_t point = cube_points[i];
-
-            vec3_t transform_point = vec3_rotate_y(point, cube_rotation.y);
-            transform_point = vec3_rotate_x(transform_point, cube_rotation.z);
-
-            transform_point.z -= camera_position.z;
-
-            vec2_t projected_point = project(transform_point);
-
-            projected_points[i] = projected_point;
-        }*/
     }
         
 
@@ -332,23 +335,14 @@ namespace Renderer
                 face_t face = {
                     .a = vertex_indices[0],
                     .b = vertex_indices[1],
-                    .c = vertex_indices[2]
+                    .c = vertex_indices[2],
+                    .color = 0xFFFFFFFF
                 };
 
                 mesh.faces.push_back(face);
             }
 
         }
-    }
-
-    vec2_t Application::project(vec3_t point)
-    {
-        vec2_t projected_point = {
-            .x = (fov_factor * point.x) / point.z,
-            .y = (fov_factor * point.y) / point.z
-        };
-
-        return projected_point;
     }
 
     void Application::load_cube_mesh_data()
